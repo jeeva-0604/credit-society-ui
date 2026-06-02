@@ -14,7 +14,7 @@ class ReceiptListScreen extends StatefulWidget {
 }
 
 class _ReceiptListScreenState extends State<ReceiptListScreen> {
-  List _receipts = [];
+  List<Map<String, dynamic>> _receipts = [];
   bool _isLoading = true;
   String? _error;
 
@@ -30,8 +30,11 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       _error = null;
     });
     try {
-      final result = await ReceiptService().getReceipts();
-      if (mounted) setState(() { _receipts = result; _isLoading = false; });
+      final raw = await ReceiptService().getReceipts();
+      if (mounted) setState(() {
+        _receipts = raw.whereType<Map<String, dynamic>>().toList();
+        _isLoading = false;
+      });
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -44,13 +47,15 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
 
   // ── FORMATTERS ──────────────────────────────────────────────────────────────
 
-  String _fmtDate(String? iso) {
-    if (iso == null || iso.isEmpty) return "-";
+  String _fmtDate(dynamic raw) {
+    if (raw == null) return '-';
+    if (raw is! String) return raw.toString();
+    if (raw.isEmpty) return '-';
     try {
-      final dt = DateTime.parse(iso);
+      final dt = DateTime.parse(raw);
       return "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}";
     } catch (_) {
-      return iso;
+      return raw;
     }
   }
 
@@ -58,12 +63,13 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
     if (raw == null) return "-";
     final d = double.tryParse(raw.toString());
     if (d == null) return "-";
-    final fixed = d.toStringAsFixed(2);
+    final bool isNeg = d < 0;
+    final fixed = d.abs().toStringAsFixed(2);
     final parts = fixed.split('.');
     String intPart = parts[0];
     final decPart = parts[1];
     // Indian number format: last 3 then groups of 2
-    if (intPart.length <= 3) return '₹$intPart.$decPart';
+    if (intPart.length <= 3) return isNeg ? '-₹$intPart.$decPart' : '₹$intPart.$decPart';
     String result = intPart.substring(intPart.length - 3);
     intPart = intPart.substring(0, intPart.length - 3);
     while (intPart.isNotEmpty) {
@@ -71,7 +77,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       result = '${intPart.substring(intPart.length - len)},$result';
       intPart = intPart.substring(0, intPart.length - len);
     }
-    return '₹$result.$decPart';
+    return isNeg ? '-₹$result.$decPart' : '₹$result.$decPart';
   }
 
   // ── BUILD ────────────────────────────────────────────────────────────────────
@@ -112,7 +118,7 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.cloud_off, size: 56, color: AppColors.error.withOpacity(0.7)),
+              Icon(Icons.cloud_off, size: 56, color: AppColors.error.withValues(alpha: 0.7)),
               const SizedBox(height: 12),
               Text("Failed to load receipts",
                   style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.error, fontSize: 16)),
@@ -151,7 +157,11 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
               label: const Text("Create Receipt"),
               style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary, foregroundColor: AppColors.white),
-              onPressed: widget.onNewReceipt,
+              onPressed: widget.onNewReceipt ?? () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Navigation not available in this context.')),
+                );
+              },
             ),
           ],
         ),
@@ -163,11 +173,11 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
       color: AppColors.primary,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        scrollDirection: Axis.horizontal,
+        scrollDirection: Axis.vertical,
         child: SingleChildScrollView(
-          scrollDirection: Axis.vertical,
+          scrollDirection: Axis.horizontal,
           child: DataTable(
-            headingRowColor: WidgetStateProperty.all(AppColors.primary.withOpacity(0.08)),
+            headingRowColor: WidgetStateProperty.all(AppColors.primary.withValues(alpha: 0.08)),
             dataRowMinHeight: 44,
             dataRowMaxHeight: 56,
             columnSpacing: 20,
@@ -186,7 +196,12 @@ class _ReceiptListScreenState extends State<ReceiptListScreen> {
                 DataCell(Text(r["receipt_no"] ?? "-",
                     style: const TextStyle(fontFamily: 'monospace', fontSize: 12))),
                 DataCell(Text(_fmtDate(r["receipt_date"]))),
-                DataCell(Text(r["member_name"] ?? "-", overflow: TextOverflow.ellipsis)),
+                DataCell(SizedBox(
+                  width: 140,
+                  child: Text(r["member_name"] ?? "-",
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1),
+                )),
                 DataCell(Text(r["account_number"] ?? "-")),
                 DataCell(Text(_fmtAmount(r["amount"]),
                     style: const TextStyle(fontWeight: FontWeight.w500))),
@@ -248,9 +263,9 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.45)),
+        border: Border.all(color: color.withValues(alpha: 0.45)),
       ),
       child: Text(s,
           style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),

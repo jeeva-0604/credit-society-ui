@@ -32,7 +32,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
   String _paymentMode = "CASH";
   DateTime _receiptDate = DateTime.now();
 
-  bool _isInitialising = false;
+  bool _isInitialising = true;
   bool _isLoadingAccounts = false;
   bool _isSaving = false;
   String? _errorMessage;
@@ -89,14 +89,17 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
   }
 
   Future<void> _loadAccounts(int memberId) async {
+    if (!mounted) return;
     setState(() {
       _isLoadingAccounts = true;
       _accounts = [];
     });
     try {
       final result = await MemberService().getAccounts(memberId);
+      if (!mounted) return;
       _accounts = result ?? [];
     } catch (_) {
+      if (!mounted) return;
       _accounts = [];
     } finally {
       if (mounted) setState(() => _isLoadingAccounts = false);
@@ -167,6 +170,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       ));
 
       if (widget.onSaved != null) {
+        setState(() => _isSaving = false);
         widget.onSaved!();
       } else {
         Navigator.pop(context);
@@ -296,7 +300,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    disabledBackgroundColor: AppColors.primary.withOpacity(0.6),
+                    disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.6),
                   ),
                   onPressed: _isSaving ? null : _save,
                   child: _isSaving
@@ -328,9 +332,9 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.07),
+        color: AppColors.primary.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -432,9 +436,9 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.error.withOpacity(0.08),
+        color: AppColors.error.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.error.withOpacity(0.4)),
+        border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,

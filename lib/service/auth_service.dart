@@ -19,7 +19,6 @@ class AuthService {
     try {
       final url = Uri.parse("$_baseUrl/auth/login")
           .replace(queryParameters: {"email": email, "password": password});
-
       final response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
@@ -41,7 +40,7 @@ class AuthService {
   }
 
   void logout() {
-    ApiService().setAccessToken('');
+    ApiService().setAccessToken('');  // empty string clears bearer token
     _isAuthenticated = false;
   }
 }

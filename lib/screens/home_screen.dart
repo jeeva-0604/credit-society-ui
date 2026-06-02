@@ -96,20 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
           SubMenuItem(
             title: 'Receipts List',
             icon: Icons.book,
-            screen: ReceiptListScreen(
-              onNewReceipt: () {
-                setState(() {
-                  _showNewReceiptForm = true;
-                  _editingReceipt = null;
-                });
-              },
-              onEditReceipt: (Map receipt) {
-                setState(() {
-                  _showNewReceiptForm = true;
-                  _editingReceipt = receipt;
-                });
-              },
-            ),
+            screen: const SizedBox.shrink(),
           ),
         ],
       ),
@@ -218,6 +205,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           _isSubMenuOpen = false;
                           _showNewMemberForm = false;
                           _editingMember = null;
+                          _showNewReceiptForm = false;
+                          _editingReceipt = null;
                           _activeScreen = _navItems[index].screen;
                         }
                       });
@@ -375,10 +364,29 @@ class _HomeScreenState extends State<HomeScreen> {
             title: Text(sub.title, style: const TextStyle(fontSize: 13)),
             onTap: () {
               setState(() {
-                // If user clicks "New Member" in sub-menu
                 if (sub.title == "New Member") {
                   _showNewMemberForm = true;
                   _editingMember = null;
+                } else if (sub.title == 'Receipts List') {
+                  _showNewMemberForm = false;
+                  _editingMember = null;
+                  _showNewReceiptForm = false;
+                  _editingReceipt = null;
+                  _activeScreen = ReceiptListScreen(
+                    key: UniqueKey(),
+                    onNewReceipt: () {
+                      setState(() {
+                        _showNewReceiptForm = true;
+                        _editingReceipt = null;
+                      });
+                    },
+                    onEditReceipt: (Map receipt) {
+                      setState(() {
+                        _showNewReceiptForm = true;
+                        _editingReceipt = receipt;
+                      });
+                    },
+                  );
                 } else {
                   _showNewMemberForm = false;
                   _editingMember = null;

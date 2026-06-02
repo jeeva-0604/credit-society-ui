@@ -27,7 +27,7 @@ class ReceiptService {
   }
 
   Future<Map<String, dynamic>> updateReceipt(int id, Map<String, dynamic> data) async {
-    final url = Uri.parse("$baseUrl/receipts/$id");
+    final url = Uri.parse("$baseUrl/receipts/$id/");
     try {
       final response = await http.put(
         url,
@@ -53,7 +53,7 @@ class ReceiptService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
-      throw Exception("Failed to load receipts (HTTP ${response.statusCode})");
+      final body = jsonDecode(response.body); throw Exception(body["detail"] ?? "Failed to load receipts (HTTP ${response.statusCode})");
     } on Exception {
       rethrow;
     } catch (e) {
@@ -68,7 +68,7 @@ class ReceiptService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       }
-      throw Exception("Receipt #$id not found");
+      final body = jsonDecode(response.body); throw Exception(body["detail"] ?? "Failed to fetch receipt #$id (HTTP ${response.statusCode})");
     } on Exception {
       rethrow;
     } catch (e) {
