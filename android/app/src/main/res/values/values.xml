@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="firebase_database_url">https://oliomarket-fdb7d.firebaseio.com</string>
+    <string name="google_api_key">AIzaSyAUW77yyF9t9jtzPcpXYSt-RuMv03CgqT4</string>
+    <string name="google_app_id">1:1066334103211:android:87670ddb57064da3e1f9ee</string>
+    <string name="gcm_defaultSenderId">1066334103211</string>
+    <string name="project_id">oliomarket-fdb7d</string>
+    <string name="storage_bucket">https://oliomarket-fdb7d.appspot.com</string>
+</resources>

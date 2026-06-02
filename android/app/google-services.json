@@ -1,0 +1,144 @@
+{
+  "project_info": {
+    "project_number": "1066334103211",
+    "firebase_url": "https://oliomarket-fdb7d-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "oliomarket-fdb7d",
+    "storage_bucket": "oliomarket-fdb7d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1066334103211:android:87670ddb57064da3e1f9ee",
+        "android_client_info": {
+          "package_name": "com.grocery.grocery"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUW77yyF9t9jtzPcpXYSt-RuMv03CgqT4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1066334103211:android:df34b96218ade1bae1f9ee",
+        "android_client_info": {
+          "package_name": "com.grocery.oliomarket"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUW77yyF9t9jtzPcpXYSt-RuMv03CgqT4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1066334103211:android:eaaac1a9e427afebe1f9ee",
+        "android_client_info": {
+          "package_name": "com.school.ihmgahs"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUW77yyF9t9jtzPcpXYSt-RuMv03CgqT4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1066334103211:android:c52fe25c681dd68ce1f9ee",
+        "android_client_info": {
+          "package_name": "com.vtech.creditsociety"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUW77yyF9t9jtzPcpXYSt-RuMv03CgqT4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1066334103211:android:89e883cc622ded21e1f9ee",
+        "android_client_info": {
+          "package_name": "com.vtech.fionaglobalschool"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUW77yyF9t9jtzPcpXYSt-RuMv03CgqT4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1066334103211:android:a0f5c1398aabb510e1f9ee",
+        "android_client_info": {
+          "package_name": "com.vtech.ischool"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUW77yyF9t9jtzPcpXYSt-RuMv03CgqT4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1066334103211:android:99dd13480cd6e488e1f9ee",
+        "android_client_info": {
+          "package_name": "com.vtech.jitcampuspulse"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAUW77yyF9t9jtzPcpXYSt-RuMv03CgqT4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

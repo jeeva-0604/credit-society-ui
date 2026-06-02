@@ -1,0 +1,138 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.vtech.creditsociety">
+    <uses-sdk tools:overrideLibrary="dev.saibotma.jitsi_meet_wrapper, org.jitsi.meet.sdk, co.apptailor.googlesignin, com.calendarevents, com.reactnativecommunity.asyncstorage, com.reactnativecommunity.netinfo, com.rnimmersive, com.corbt.keepawake, com.BV.LinearGradient, com.horcrux.svg, com.oney.WebRTCModule, com.ocetnik.timer, com.kevinresol.react_native_default_preference, com.learnium.RNDeviceInfo, com.amplitude.reactnative, com.reactnativegooglesignin, com.reactnativecommunity.clipboard, com.swmansion.gesturehandler.react, org.linusu, org.reactnative.maskedview, com.reactnativepagerview, com.oblador.performance, com.swmansion.reanimated, com.th3rdwave.safeareacontext, com.swmansion.rnscreens, com.reactnativecommunity.slider, org.devio.rn.splashscreen, com.brentvatne.react, com.reactnativecommunity.webview"/>
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <application
+        android:label="Larsen &amp; Toubro Society"
+        android:name="${applicationName}"
+        android:requestLegacyExternalStorage="true"
+        android:enableOnBackInvokedCallback="true"
+        android:icon="@mipmap/ic_launcher"
+        tools:replace="android:label"
+        android:usesCleartextTraffic="true">
+
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="high_importance_channel" />
+
+        <!-- Google Maps API Key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyCD9fkVhK6BWBWqdMYsLr2forrcXpXrJNY" />
+
+        <!-- PhonePe SDK -->
+        <meta-data android:name="com.phonepe.andriod.sdk.isUAT" android:value="true" />
+        <meta-data android:name="com.phonepe.andriod.sdk.isSimulator" android:value="true" />
+        <meta-data android:name="com.phonepe.andriod.sdk.MerchantId" android:value="PGTESTPAYUAT" />
+
+        <!-- Main Activity -->
+        <activity
+            android:name="io.flutter.plugins.localauth.AuthenticationActivity"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.AppCompat.NoActionBar"/>
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:taskAffinity=""
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+
+        <!-- Jitsi Wrapper Activity -->
+        <activity
+            android:name="dev.saibotma.jitsi_meet_wrapper.JitsiMeetWrapperActivity"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+            android:launchMode="singleTask"
+            android:theme="@style/JitsiMeetActivityStyle"
+            android:resizeableActivity="true"
+            android:supportsPictureInPicture="true"
+            android:windowSoftInputMode="adjustResize"
+            android:autoRemoveFromRecents="true"
+            android:exported="true" />
+
+        <!-- Orientation Receiver -->
+        <receiver
+            android:name="org.wonday.orientation.OrientationBroadcastReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.CONFIGURATION_CHANGED" />
+            </intent-filter>
+        </receiver>
+
+        <meta-data android:name="flutterEmbedding" android:value="2" />
+
+        <!-- File Provider -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths"/>
+        </provider>
+
+    </application>
+
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT"/>
+            <data android:mimeType="text/plain"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="tel" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="mailto" />
+        </intent>
+    </queries>
+
+    <!-- Permissions -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.FLASHLIGHT"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+</manifest>

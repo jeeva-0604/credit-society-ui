@@ -1,0 +1,31 @@
+diff --git a/node_modules/react-native-orientation-locker/android/src/main/java/org/wonday/orientation/OrientationModule.java b/node_modules/react-native-orientation-locker/android/src/main/java/org/wonday/orientation/OrientationModule.java
+index 9603ab0..1724b4b 100644
+--- a/node_modules/react-native-orientation-locker/android/src/main/java/org/wonday/orientation/OrientationModule.java
++++ b/node_modules/react-native-orientation-locker/android/src/main/java/org/wonday/orientation/OrientationModule.java
+@@ -355,7 +355,25 @@ public class OrientationModule extends ReactContextBaseJavaModule implements Ori
+     public void start() {
+         FLog.i(ReactConstants.TAG, "orientation detect enabled.");
+         mOrientationListener.enable();
+-        compatRegisterReceiver(ctx, mReceiver, new IntentFilter("onConfigurationChanged"), false);
++
++        // 💡 FIX START: Replace the problematic line with version-aware registration
++        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
++            // API 33 (Android 13) and above requires an explicit export flag.
++            // We use RECEIVER_NOT_EXPORTED since this receiver only handles internal configuration changes.
++            getReactApplicationContext().registerReceiver(
++                    mReceiver,
++                    new IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED),
++                    Context.RECEIVER_NOT_EXPORTED
++            );
++        } else {
++            // Use the old registration method for older Android versions.
++            getReactApplicationContext().registerReceiver(
++                    mReceiver,
++                    new IntentFilter(Intent.ACTION_CONFIGURATION_CHANGED)
++            );
++        }
++        // 💡 FIX END
++
+         isConfigurationChangeReceiverRegistered = true;
+     }
+ 
