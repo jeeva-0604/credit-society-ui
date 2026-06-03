@@ -36,6 +36,7 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
   bool _isLoadingAccounts = false;
   bool _isSaving = false;
   String? _errorMessage;
+  String? _memberLoadError;
 
   bool get _isEdit => widget.receipt != null;
 
@@ -55,13 +56,37 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
     super.dispose();
   }
 
-  Future<void> _initialise() async {
-    setState(() => _isInitialising = true);
+  Future<void> _reloadMembers() async {
+    if (!mounted) return;
+    setState(() { _memberLoadError = null; _members = []; });
     try {
-      final list = await MemberService().getMembers("");
-      _members = list ?? [];
-    } catch (_) {
+      final raw = await MemberService().getMembers("");
+      if (!mounted) return;
+      if (raw is List) {
+        setState(() => _members = raw);
+      } else {
+        setState(() => _memberLoadError =
+            "Server returned an unexpected response. Make sure you are logged in.");
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _memberLoadError = "Failed to load members — ${e.toString().replaceFirst(RegExp(r'^Exception: '), '')}");
+    }
+  }
+
+  Future<void> _initialise() async {
+    setState(() { _isInitialising = true; _memberLoadError = null; });
+    try {
+      final raw = await MemberService().getMembers("");
+      if (raw is List) {
+        _members = raw;
+      } else {
+        _members = [];
+        _memberLoadError = "Could not load members. Server returned an unexpected response — you may need to log in again.";
+      }
+    } catch (e) {
       _members = [];
+      _memberLoadError = "Failed to load members: ${e.toString().replaceFirst(RegExp(r'^Exception: '), '')}";
     }
 
     if (widget.receipt != null) {
@@ -377,29 +402,79 @@ class _ReceiptScreenState extends State<ReceiptScreen> {
       );
     }
 
-    return DropdownButtonFormField<int>(
-      value: _selectedMember,
-      decoration: const InputDecoration(
-        labelText: "Member *",
-        border: OutlineInputBorder(),
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      ),
-      isExpanded: true,
-      items: _members.map<DropdownMenuItem<int>>((m) {
-        return DropdownMenuItem<int>(
-          value: m["id"] as int,
-          child: Text(m["member_name"]?.toString() ?? "", overflow: TextOverflow.ellipsis),
-        );
-      }).toList(),
-      onChanged: (val) {
-        setState(() {
-          _selectedMember = val;
-          _selectedAccount = null;
-          _accounts = [];
-        });
-        if (val != null) _loadAccounts(val);
-      },
-      validator: (v) => v == null ? "Please select a member" : null,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Error banner shown when member load failed
+        if (_memberLoadError != null)
+          Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.error.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(_memberLoadError!,
+                      style: TextStyle(color: AppColors.error, fontSize: 12)),
+                ),
+                TextButton.icon(
+                  onPressed: _reloadMembers,
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text("Retry", style: TextStyle(fontSize: 12)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        DropdownButtonFormField<int>(
+          value: _selectedMember,
+          decoration: InputDecoration(
+            labelText: "Member *",
+            border: const OutlineInputBorder(),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            suffixIcon: _members.isEmpty && _memberLoadError == null
+                ? const SizedBox(
+                    width: 20, height: 20,
+                    child: Padding(
+                      padding: EdgeInsets.all(14),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : null,
+          ),
+          isExpanded: true,
+          hint: _members.isEmpty
+              ? Text(_memberLoadError != null ? "No members loaded" : "Loading...",
+                  style: const TextStyle(color: AppColors.textLight))
+              : null,
+          items: _members.map<DropdownMenuItem<int>>((m) {
+            return DropdownMenuItem<int>(
+              value: m["id"] as int,
+              child: Text(m["member_name"]?.toString() ?? "", overflow: TextOverflow.ellipsis),
+            );
+          }).toList(),
+          onChanged: _members.isEmpty ? null : (val) {
+            setState(() {
+              _selectedMember = val;
+              _selectedAccount = null;
+              _accounts = [];
+            });
+            if (val != null) _loadAccounts(val);
+          },
+          validator: (v) => v == null ? "Please select a member" : null,
+        ),
+      ],
     );
   }
 
