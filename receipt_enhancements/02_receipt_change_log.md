@@ -118,6 +118,24 @@
 
 ---
 
+## Pass 3 — Live App Testing Changes (2026-06-03)
+
+> Issue discovered by running the app: member dropdown was silently empty.
+
+### `lib/society/ReceiptScreen.dart`
+
+| Change | Before | After |
+|--------|--------|-------|
+| `_memberLoadError` state variable | Did not exist | Added `String? _memberLoadError` to track member fetch failures |
+| `_reloadMembers()` method | Did not exist | New async method: clears error, re-fetches members, sets `_memberLoadError` on failure |
+| `_initialise()` — member fetch | `list ?? []` (no type check, TypeError silently swallowed) | `raw is List` guard; sets `_memberLoadError` with full message on type mismatch or exception |
+| `_buildMemberField()` — error display | No error shown (empty dropdown, no explanation) | Red banner with warning icon + full error message when `_memberLoadError != null` |
+| `_buildMemberField()` — Retry button | No retry mechanism | `TextButton.icon` Retry inside error banner calls `_reloadMembers()` |
+| `_buildMemberField()` — empty dropdown | Active dropdown with no items (confusing) | Disabled dropdown with hint text `"No members loaded"` when `_members` is empty |
+| `_buildMemberField()` — loading indicator | No indication members are being fetched | Small spinner shown in dropdown suffix while loading |
+
+---
+
 ## Files Created
 
 | File | Purpose |

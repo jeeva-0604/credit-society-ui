@@ -624,3 +624,100 @@ onDestinationSelected: (index) {
 
 **Impact:** Receipt form always starts fresh when the Receipts module is re-entered.
 
+---
+
+---
+
+# Pass 3 Findings — Live App Testing (2026-06-03)
+
+> Issue found by running the app and observing the New Receipt form.
+
+---
+
+## Issue 28 — Member dropdown silently empty: error swallowed on 401 (CRITICAL)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `lib/society/ReceiptScreen.dart` |
+| **Symptom** | Member dropdown shows no options; user cannot create a receipt |
+| **Root Cause** | `MemberService.getMembers()` has no HTTP status check. When the backend returns 401 (no valid auth token), `jsonDecode(response.body)` returns a `Map` (`{"detail": "Not authenticated"}`). Assigning that `Map` to `List _members` throws a `TypeError` at runtime. `_initialise()` caught all exceptions with `catch (_) { _members = []; }` — silently discarding the error and leaving the dropdown empty with no message to the user. |
+
+### Before (broken)
+
+```dart
+// _initialise():
+try {
+  final list = await MemberService().getMembers("");
+  _members = list ?? [];   // if list is a Map (401 body), TypeError thrown here
+} catch (_) {
+  _members = [];           // error swallowed — dropdown silently empty, no hint shown
+}
+
+// _buildMemberField():
+// Dropdown with empty items — user sees blank dropdown, no explanation
+```
+
+### After (fixed)
+
+```dart
+// New state variable:
+String? _memberLoadError;
+
+// New retry method:
+Future<void> _reloadMembers() async {
+  setState(() { _memberLoadError = null; _members = []; });
+  try {
+    final raw = await MemberService().getMembers("");
+    if (raw is List) {
+      setState(() => _members = raw);
+    } else {
+      setState(() => _memberLoadError =
+          "Server returned an unexpected response. Make sure you are logged in.");
+    }
+  } catch (e) {
+    setState(() => _memberLoadError = "Failed to load members — ${e...}");
+  }
+}
+
+// _initialise(): type-safe assignment
+try {
+  final raw = await MemberService().getMembers("");
+  if (raw is List) {
+    _members = raw;
+  } else {
+    _members = [];
+    _memberLoadError = "Could not load members. You may need to log in again.";
+  }
+} catch (e) {
+  _members = [];
+  _memberLoadError = "Failed to load members: ${e...}";
+}
+
+// _buildMemberField(): error banner + Retry button + disabled dropdown when empty
+Column(children: [
+  if (_memberLoadError != null)
+    Container(   // red banner with error text
+      child: Row(children: [
+        Icon(Icons.warning_amber_rounded),
+        Text(_memberLoadError!),
+        TextButton.icon(onPressed: _reloadMembers, label: Text("Retry")),
+      ]),
+    ),
+  DropdownButtonFormField(
+    hint: _members.isEmpty ? Text("No members loaded") : null,
+    onChanged: _members.isEmpty ? null : (val) { ... },   // disabled when empty
+    items: _members.map(...).toList(),
+  ),
+])
+```
+
+**Impact:**
+- User sees a clear red error banner explaining why the dropdown is empty
+- **Retry button** lets the user reload members without restarting the app
+- Dropdown shows hint text `"No members loaded"` instead of appearing broken
+- Dropdown is disabled when empty (prevents null tap crashes)
+- Type-safe `raw is List` check prevents silent `TypeError` swallowing
+
+**Underlying root cause (auth):** `MemberService.getMembers()` sends a Bearer token via `ApiService().getAuthHeaders()`. If no token is set (e.g. splash screen placeholder credentials `"admin@society.com"/"admin123"` fail), the backend returns 401 and members never load. The Retry button works once a valid token is in `ApiService._accessToken`.
+
+
