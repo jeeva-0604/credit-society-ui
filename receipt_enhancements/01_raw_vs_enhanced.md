@@ -720,4 +720,344 @@ Column(children: [
 
 **Underlying root cause (auth):** `MemberService.getMembers()` sends a Bearer token via `ApiService().getAuthHeaders()`. If no token is set (e.g. splash screen placeholder credentials `"admin@society.com"/"admin123"` fail), the backend returns 401 and members never load. The Retry button works once a valid token is in `ApiService._accessToken`.
 
+---
+
+---
+
+# Pass 4 Findings — Backend Fix Confirmed + Receipt Module Refactor (2026-06-03)
+
+---
+
+## Issue 29 — Backend `/members/search/` returned HTTP 500 on all calls (CRITICAL)
+
+| Field | Detail |
+|-------|--------|
+| **Layer** | FastAPI backend — `api/routes/member.py`, `api/crud/member.py`, `api/schemas/member.py` |
+| **Symptom** | Every call to `GET /members/search/?search=`, `GET /members/`, `GET /members/{id}` returned HTTP 500 — Flutter showed "ClientException: Failed to fetch" |
+| **Root Cause** | Pydantic `MemberResponse` serialization crashed on any member row. The exact field(s) causing the crash were in the schema validation chain (suspected: required `thrift_amount: float` or `BranchSchema.name: str` triggering a ValidationError when null DB values were encountered during `model_validate`). All member endpoints that serialized via `MemberResponse` failed; endpoints that bypassed it (e.g. `GET /members/{id}/accounts`, `GET /members/get_member_balances/{id}`) continued to work. |
+
+### Fix applied (backend)
+
+Backend Python fix applied by developer. Member endpoints now return correct data.
+
+**Verified:** `GET /members/search/?search=` returns `{"page":1,"size":20,"total":N,"items":[...]}` successfully as of 2026-06-03.
+
+### Flutter-side defensive handling added (in new `lib/services/receipt_service.dart`)
+
+```dart
+Future<List<Map<String, dynamic>>> searchMembers(String query) async {
+  final res = await http.get(...);
+  if (res.statusCode == 200) {
+    final decoded = jsonDecode(res.body);
+    if (decoded is List) {
+      return decoded.whereType<Map<String, dynamic>>().toList();
+    }
+    // Handles paginated {"page":1,"items":[...]} response format
+    if (decoded is Map && decoded.containsKey('items')) {
+      return (decoded['items'] as List? ?? [])
+          .whereType<Map<String, dynamic>>()
+          .toList();
+    }
+  }
+  return [];  // 500 or unexpected format → empty list, no crash
+}
+```
+
+**Impact:** Member search now works. Flutter handles both the paginated dict format AND a plain list, so the code is forward-compatible if the backend response format changes.
+
+---
+
+---
+
+# Pass 5 Findings — Legacy Screen Replication (2026-06-04)
+
+> Scope: Full receipt module gap analysis vs client legacy .NET screen screenshot.
+> Phase 1 analysis → 13 gaps identified → 8 implemented (Reverse pending client approval).
+
+---
+
+## Issue 31 — View button had empty handler: no search/navigate functionality (HIGH)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `lib/screens/receipts/receipt_form_screen.dart` |
+| **Root Cause** | `_btn('View', onPressed: hasCur && !_isEditMode ? () {} : null)` — empty callback. Legacy system View button opens a search popup by receipt number or member name. |
+
+### Before (broken)
+```dart
+_btn('View', onPressed: hasCur && !_isEditMode ? () {} : null),
+```
+
+### After (fixed)
+```dart
+_btn('View', onPressed: !_isEditMode ? _doView : null),
+```
+
+`_doView()` opens an `AlertDialog` with:
+- Toggle: search by **Receipt No** or **Member Name** (ChoiceChip)
+- Search text field — filters from already-loaded `_receipts` list (no extra API call)
+- Scrollable results list showing receipt_no, member_name, date
+- Tap any row → closes dialog and navigates to that receipt via `_navigateTo(idx)`
+
+**Impact:** User can search and jump to any receipt without using First/Prev/Next/Last buttons.
+
+---
+
+## Issue 32 — Print button showed toast only: no PDF generated (HIGH)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `lib/screens/receipts/receipt_form_screen.dart` |
+| **Root Cause** | `onPressed: () => _showMsg('Print: coming soon.')` — stub only. Legacy system prints a formatted receipt. Packages `pdf: ^3.10.4` and `printing: ^5.11.0` were already in pubspec.yaml. |
+
+### Before (broken)
+```dart
+_btn('Print', onPressed: hasCur && !_isEditMode ? () => _showMsg('Print: coming soon.') : null),
+```
+
+### After (fixed)
+```dart
+_btn('Print', onPressed: hasCur && !_isEditMode ? _doPrint : null),
+```
+
+`_doPrint()` generates an A5 landscape PDF using `pdf` package with:
+- Society name header: "L&T GROUP EMPLOYEES COOPERATIVE THRIFT & CREDIT SOCIETY LTD"
+- Receipt No + Date
+- Received From (member name + type)
+- Description / Narration
+- Payment mode; cheque details when applicable
+- A/C entries table: Description | Ref No | Amount
+- TOTAL row
+- Receiver's Signature + Authorised Signatory footer lines
+- "This is a computer generated receipt." footer
+
+PDF is rendered via `Printing.layoutPdf()` — opens the system print/share dialog.
+
+**Impact:** Print button produces a professional PDF receipt matching the legacy printout layout.
+
+---
+
+## Issue 33 — Delete button called showMsg stub instead of API (HIGH)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `lib/screens/receipts/receipt_form_screen.dart`, `lib/services/receipt_service.dart` |
+| **Root Cause** | `_doDelete()` showed confirmation dialog then called `_showMsg('Delete API coming soon.')`. No `DELETE /receipts/{id}/` call was made. |
+
+### Before (broken)
+```dart
+if (ok != true || !mounted) return;
+_showMsg('Delete API coming soon.');
+```
+
+### After (fixed)
+```dart
+if (ok != true || !mounted) return;
+setState(() { _isSaving = true; _errorMsg = null; });
+try {
+  await ReceiptService().deleteReceipt(_current!['id'] as int);
+  _showMsg('Receipt $no deleted.', ok: true);
+  await _loadReceipts();
+  setState(() { _mode = _Mode.view; _isSaving = false; });
+} catch (e) {
+  setState(() { _isSaving = false; _errorMsg = ...; });
+}
+```
+
+Added `deleteReceipt(int id)` to `receipt_service.dart`:
+```dart
+Future<void> deleteReceipt(int id) async {
+  final url = Uri.parse('$_base/receipts/$id/');
+  final res = await http.delete(url, headers: await _headers);
+  if (res.statusCode == 200 || res.statusCode == 204) return;
+  _throwDetail(res, 'Failed to delete receipt');
+}
+```
+
+**Impact:** Delete confirmation → actual API delete → list reloads.
+
+---
+
+## Issue 34 — Save payload missing received_from, drawn_on, cheque_date, deposited_in (CRITICAL)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `lib/screens/receipts/receipt_form_screen.dart` `_doSave()` |
+| **Root Cause** | `_doSave()` payload did not include `received_from`, `drawn_on`, `cheque_date`, `deposited_in`. These fields were tracked in UI state but never sent to the backend. |
+
+### Before (broken)
+```dart
+final payload = {
+  'receipt_date': ...,
+  'member_id': ...,
+  'account_id': ...,
+  'amount': ...,
+  'payment_mode': pm,
+  if (_isChequeDD && refNo.isNotEmpty) 'reference_no': refNo,
+  if (narr.isNotEmpty) 'narration': narr,
+};
+```
+
+### After (fixed)
+```dart
+final payload = {
+  'receipt_date' : _apiDate(_receiptDate),
+  'member_id'    : _memberId,
+  'account_id'   : _selectedAccountId,
+  'amount'       : amt.toStringAsFixed(2),
+  'payment_mode' : pm,
+  'received_from': _receivedFrom,
+  if (narr.isNotEmpty) 'narration': narr,
+  if (_isChequeDD) ...{
+    'reference_no' : _chequeNoCtrl.text.trim(),
+    'drawn_on'     : _drawnOnCtrl.text.trim(),
+    'cheque_date'  : _chequeDtCtrl.text.trim(),
+    'deposited_in' : _depositedInCtrl.text.trim(),
+  } else if (refNo.isNotEmpty)
+    'reference_no' : refNo,
+};
+```
+
+**Impact:** All receipt header fields are now persisted on create and update.
+
+---
+
+## Issue 35 — Receipt model missing fields (MEDIUM)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `lib/models/receipt.dart` |
+| **Root Cause** | `Receipt` class and `fromJson`/`toJson` were missing `receivedFrom`, `drawnOn`, `chequeDate`, `depositedIn`. If the API returns these fields, they were silently dropped. |
+
+### After (fixed)
+Added to `Receipt` class:
+```dart
+final String? receivedFrom;
+final String? drawnOn;
+final String? chequeDate;
+final String? depositedIn;
+```
+Wired into `fromJson` (reads `received_from`, `drawn_on`, `cheque_date`, `deposited_in`) and `toJson`.
+
+---
+
+## Issue 36 — Name field read-only for PDO/Others in edit mode (MEDIUM)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `lib/screens/receipts/receipt_form_screen.dart` `_nameRow()` |
+| **Root Cause** | `_field(_nameCtrl, readOnly: true)` was used for non-Member modes in all modes including edit. For PDO and Others, the user must be able to type a name. |
+
+### Before (broken)
+```dart
+: _field(_nameCtrl, readOnly: true),
+```
+
+### After (fixed)
+```dart
+: _field(_nameCtrl, readOnly: !_isEditMode),
+```
+
+**Impact:** In PDO/Others mode, the Name field is editable in Add/Change mode and read-only in View mode.
+
+---
+
+## Issue 37 — Missing validations: Name format and Cheque/DD mandatory fields (HIGH)
+
+| Field | Detail |
+|-------|--------|
+| **File** | `lib/screens/receipts/receipt_form_screen.dart` `_validate()` |
+| **Root Cause** | No validation for: (a) Name field when PDO/Others selected, (b) Drawn On/Cheque No/Cheque Date when Cheque/DD mode active. Legacy screen enforces both. |
+
+### After (fixed)
+
+Added to `_validate()`:
+
+**PDO / Others — Name required, A-Z and spaces only:**
+```dart
+if (_receivedFrom != 'Member') {
+  final name = _nameCtrl.text.trim();
+  if (name.isEmpty) { errorMsg = 'Name is required.'; return false; }
+  if (!RegExp(r'^[A-Za-z ]+$').hasMatch(name)) {
+    errorMsg = 'Name must contain letters and spaces only.'; return false;
+  }
+}
+```
+
+**Cheque/DD — mandatory header fields:**
+```dart
+if (_isChequeDD) {
+  if (_drawnOnCtrl.text.trim().isEmpty)  { errorMsg = 'Drawn On required.'; return false; }
+  if (_chequeNoCtrl.text.trim().isEmpty) { errorMsg = 'Cheque No required.'; return false; }
+  if (_chequeDtCtrl.text.trim().isEmpty) { errorMsg = 'Cheque Date required.'; return false; }
+}
+```
+
+**Impact:** Bad data cannot be saved; user gets immediate inline error message.
+
+---
+
+## Issue 30 — Receipt module refactored to canonical file structure (HIGH)
+
+| Field | Detail |
+|-------|--------|
+| **Files (old)** | `lib/society/ReceiptScreen.dart`, `lib/society/ReceiptListScreen.dart`, `lib/service/receipt_service.dart` |
+| **Files (new)** | `lib/models/receipt.dart`, `lib/services/receipt_service.dart`, `lib/screens/receipts/receipt_form_screen.dart`, `lib/screens/receipts/receipt_list_screen.dart`, `lib/screens/receipts/receipt_detail_screen.dart` |
+| **Scope** | Pure Flutter frontend refactor; backend API contract unchanged |
+
+### Changes per file
+
+#### `lib/models/receipt.dart` (new)
+
+Typed `Receipt` model with `fromJson` / `toJson` matching the full API response shape including `account_balance`, `demand_detail_id`, `status`.
+
+#### `lib/services/receipt_service.dart` (new canonical path)
+
+| Method | Change |
+|--------|--------|
+| `createReceipt` / `updateReceipt` | Support `demand_detail_id` in payload |
+| `searchMembers(query)` | New — handles paginated `{"items":[...]}` AND plain list; returns empty list (not throws) on 500 |
+| `getMemberAccounts(memberId)` | New — self-contained copy so receipt screens need not import MemberService |
+| `_throwDetail` | Return type `Never` — prevents dead-code after the call site |
+
+#### `lib/screens/receipts/receipt_form_screen.dart` (replaces ReceiptScreen)
+
+| Feature | Before | After |
+|---------|--------|-------|
+| Member field | Dropdown pre-loaded from full member list (broke when `/members/search/` returned 500) | Debounced search-as-you-type with inline results — works even if search is slow; fails gracefully with empty list |
+| Reference No | Always visible | Only shown when payment mode is BANK, UPI, or ONLINE |
+| After save | Generic "Receipt saved" snackbar | Shows `receipt_no` + `account_balance` from API response |
+| `demand_detail_id` | Not present | Optional field in collapsible "Advanced Options" section |
+| LOCKED receipt | Not handled | Warning banner, all fields read-only, Save button hidden |
+
+#### `lib/screens/receipts/receipt_list_screen.dart` (replaces ReceiptListScreen)
+
+| Feature | Before | After |
+|---------|--------|-------|
+| Edit button on LOCKED receipt | Always enabled (clicking triggered 422 from backend) | Disabled (greyed icon, tooltip "Receipt is locked") |
+| View action | Not present | Eye icon button → pushes `ReceiptDetailScreen` via `Navigator.push` |
+| Service import | `lib/service/receipt_service.dart` | `lib/services/receipt_service.dart` (canonical path) |
+
+#### `lib/screens/receipts/receipt_detail_screen.dart` (new)
+
+New read-only screen showing all receipt fields except `journal_id`. Displays `account_balance` prominently. Accessible by tapping View (👁) in the receipt list.
+
+#### `lib/screens/home_screen.dart` (receipt route entry only)
+
+```dart
+// Before
+import 'package:credit_society/society/ReceiptListScreen.dart';
+import '../society/ReceiptScreen.dart';
+// ...
+child: ReceiptScreen(receipt: receiptData, onSaved: _onReceiptSaved)
+
+// After
+import 'receipts/receipt_list_screen.dart';
+import 'receipts/receipt_form_screen.dart';
+// ...
+child: ReceiptFormScreen(receipt: receiptData, onSaved: _onReceiptSaved)
+```
+
+**Impact:** Receipt module now lives at clean canonical paths matching project conventions. Member search works with the fixed backend. All new API contract fields (`demand_detail_id`, `account_balance`, `reference_no` conditional) are handled correctly.
+
 

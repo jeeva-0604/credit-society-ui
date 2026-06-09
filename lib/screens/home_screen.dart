@@ -1,4 +1,4 @@
-import 'package:credit_society/society/ReceiptListScreen.dart';
+import 'receipts/receipt_form_screen.dart';
 import 'package:credit_society/society/collection_create_screen.dart';
 import 'package:flutter/material.dart';
 import '../society/AccountListScreen.dart';
@@ -11,7 +11,6 @@ import '../society/LoanApplyScreen.dart';
 import '../society/LoanListScreen.dart';
 import '../society/MemberEntryScreen.dart';
 import '../society/MemberListScreen.dart';
-import '../society/ReceiptScreen.dart';
 import '../society/TrialBalanceScreen.dart';
 import '../utils/app_colors.dart';
 import '../utils/nav_menu.dart';
@@ -250,27 +249,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   /// Called by ReceiptScreen after a successful create or update.
-  /// Hides the form and rebuilds ReceiptListScreen with a UniqueKey so that
-  /// initState fires and the list reloads fresh.
   void _onReceiptSaved() {
     setState(() {
       _showNewReceiptForm = false;
       _editingReceipt = null;
-      _activeScreen = ReceiptListScreen(
-        key: UniqueKey(),
-        onNewReceipt: () {
-          setState(() {
-            _showNewReceiptForm = true;
-            _editingReceipt = null;
-          });
-        },
-        onEditReceipt: (Map receipt) {
-          setState(() {
-            _showNewReceiptForm = true;
-            _editingReceipt = receipt;
-          });
-        },
-      );
+      _activeScreen = ReceiptFormScreen(key: UniqueKey());
     });
   }
 
@@ -299,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
         Expanded(
-          child: ReceiptScreen(
+          child: ReceiptFormScreen(
             receipt: receiptData,
             onSaved: _onReceiptSaved,
           ),
@@ -372,21 +355,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   _editingMember = null;
                   _showNewReceiptForm = false;
                   _editingReceipt = null;
-                  _activeScreen = ReceiptListScreen(
-                    key: UniqueKey(),
-                    onNewReceipt: () {
-                      setState(() {
-                        _showNewReceiptForm = true;
-                        _editingReceipt = null;
-                      });
-                    },
-                    onEditReceipt: (Map receipt) {
-                      setState(() {
-                        _showNewReceiptForm = true;
-                        _editingReceipt = receipt;
-                      });
-                    },
-                  );
+                  _activeScreen = ReceiptFormScreen(key: UniqueKey());
                 } else {
                   _showNewMemberForm = false;
                   _editingMember = null;
