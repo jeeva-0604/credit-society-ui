@@ -9,24 +9,24 @@ class ApiService {
 
   static String getBaseUrl() {
     if (kIsWeb) {
-      return "http://127.0.0.1:8080/credit_society/api/v1/";
+      return "http://127.0.0.1:9000/credit_society/api/v1/";
     } else if (Platform.isAndroid) {
       return "http://192.168.29.88:8080/credit_society/api/v1/";////"http://10.0.2.2:8080/credit_society/api/v1/";//"
     } else if (Platform.isWindows) {
-      return "http://127.0.0.1:8080/credit_society/api/v1/";
+      return "http://127.0.0.1:9000/credit_society/api/v1/";
     } else {
       return "http://example.com";
     }
   }
   static String getOnlyUrl() {
     if (kIsWeb) {
-      return "http://127.0.0.1:8080/";
+      return "http://127.0.0.1:9000/";
     } else if (Platform.isAndroid) {
-      return "http://127.0.0.1:8080/";
+      return "http://127.0.0.1:9000/";
     } else if (Platform.isWindows) {
-      return "http://127.0.0.1:8080/";
+      return "http://127.0.0.1:9000/";
     } else {
-      return "http://127.0.0.1:8080/";
+      return "http://127.0.0.1:9000/";
     }
   }
 
@@ -56,7 +56,7 @@ class ApiService {
 
   // static String getBaseUrl() {
   //   if (kIsWeb) {
-  //     return "https://cloud-hospital.com/school_sas_c1";//"http://127.0.0.1:8080"; //
+  //     return "https://cloud-hospital.com/school_sas_c1";//"http://127.0.0.1:9000"; //
   //   } else if (Platform.isAndroid) {
   //     return "https://cloud-hospital.com/school_sas_c1";//"http://10.0.2.2:8080"; //
   //   } else if (Platform.isWindows) {
