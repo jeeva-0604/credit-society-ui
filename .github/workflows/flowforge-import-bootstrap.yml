@@ -1,0 +1,49 @@
+name: Bootstrap FlowForge Community v0.4.0
+
+on:
+  push:
+    branches:
+      - flowforge-community-v0.4.0
+
+permissions:
+  contents: write
+
+jobs:
+  import-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Verify and import the versioned source archive
+        shell: bash
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+          ARCHIVE_URL: https://d2ol7oe51mr4n9.cloudfront.net/user_3KDJir3RhGWbUjBNuU7xr7bxBOj/a43112ea-5a64-4d28-a696-20288ca76298.zip
+          EXPECTED_SHA256: c3b32ff9c319aaa4450d28b0f89d70965ca2b31d4497810be337da6a343bf7e0
+        run: |
+          set -euo pipefail
+          if [[ ! -f flowforge-community/backend/flowforge/main.py ]]; then
+            archive="$RUNNER_TEMP/flowforge-community-v0.4.0.zip"
+            extracted="$RUNNER_TEMP/flowforge-extracted"
+            curl --fail --location --retry 3 --silent --show-error "$ARCHIVE_URL" -o "$archive"
+            echo "$EXPECTED_SHA256  $archive" | sha256sum --check --status
+            mkdir -p "$extracted"
+            unzip -q "$archive" -d "$extracted"
+            test -f "$extracted/flowforge-community/backend/flowforge/main.py"
+            mkdir -p flowforge-community
+            cp -a "$extracted/flowforge-community/." flowforge-community/
+          else
+            echo "FlowForge source already present; only cleaning bootstrap files."
+          fi
+          rm -f .github/workflows/flowforge-import-bootstrap.yml FLOWFORGE_COMMUNITY_IMPORT.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Add FlowForge Community v0.4.0 source"
+            git push origin "HEAD:$BRANCH_NAME"
+          fi
