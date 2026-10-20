@@ -1,0 +1,72 @@
+name: FlowForge Community CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+      - name: Run backend test suite & CLI doctor
+        env:
+          PYTHONPATH: backend
+          DATABASE_URL: sqlite://
+        run: |
+          python backend/run_tests.py
+          python -m flowforge.cli doctor
+          python backend/benchmarks/run_benchmarks.py
+
+  frontend-build-and-e2e:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/backend
+      DATABASE_URL: sqlite:///./flowforge_e2e.sqlite
+      FLOWFORGE_MASTER_KEY: ci-only-test-master-key-never-use-in-production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install backend dependencies for browser acceptance tests
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+      - name: Verify frontend contracts and build
+        working-directory: frontend
+        run: |
+          node verify_frontend.mjs
+          npm install
+          npm run build
+      - name: Type-check Playwright tests
+        working-directory: frontend
+        run: npm run typecheck:e2e
+      - name: Install Playwright Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Run real browser acceptance tests against FastAPI
+        working-directory: frontend
+        run: |
+          python -m uvicorn flowforge.main:app --app-dir ../backend --host 127.0.0.1 --port 8000 > ../flowforge-e2e-api.log 2>&1 &
+          API_PID=$!
+          trap 'kill "$API_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 45); do
+            if curl --silent --fail http://127.0.0.1:8000/health > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl --fail http://127.0.0.1:8000/health
+          npm run test:e2e
